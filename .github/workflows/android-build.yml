@@ -23,15 +23,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 📱 Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: 🛡️ Defensive Check for Gradle Wrapper
+      - name: 🛡️ Ensure Gradle Wrapper
         run: |
-          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "gradle-wrapper.jar not found, generating wrapper..."
-            gradle wrapper --gradle-version 8.10.2
-          fi
+          rm -f gradle/wrapper/gradle-wrapper.jar
+          gradle wrapper --gradle-version 8.10.2
           chmod +x gradlew
 
       - name: ⚡ Set up Gradle & Cache
