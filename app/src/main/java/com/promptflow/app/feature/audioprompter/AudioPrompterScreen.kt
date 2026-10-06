@@ -12,12 +12,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,8 +32,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -41,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
@@ -84,6 +86,9 @@ fun AudioPrompterScreen(
 
     val scrollState = rememberScrollState()
     var fontSizeSp by remember { mutableIntStateOf(24) }
+
+    // Focus line vertical position: 0.35f (upper 35% - ergonomic golden ratio) vs 0.50f (center)
+    var focusPositionRatio by remember { mutableFloatStateOf(0.35f) }
 
     // Dynamic amplitude history (24 segments)
     val waveformHistory = remember { mutableStateListOf<Float>() }
@@ -155,30 +160,32 @@ fun AudioPrompterScreen(
             )
         }
 
-        // 2. Immersive Full-Screen Teleprompter Viewport (Takes 70%+ of screen!)
-        Box(
+        // 2. Immersive Full-Screen Teleprompter Viewport with Calibrated Upper-35% Focus Line
+        BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
                 .padding(vertical = 4.dp)
         ) {
-            // Subtle Left Focus Margin Cursor (Outside of text! Never overlaps words!)
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .width(4.dp)
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp))
-                    .background(AccentCoral)
-            )
+            val focusY = maxHeight * focusPositionRatio
 
-            // Very subtle full-width reading band behind text
+            // Subtle full-width reading band behind text at exact calibrated height
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
-                    .align(Alignment.Center)
+                    .offset(y = focusY - 26.dp)
                     .background(Color(0x0DFFFFFF))
+            )
+
+            // Subtle Left Focus Margin Cursor (Aligned to upper 35% focus line!)
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(48.dp)
+                    .offset(y = focusY - 24.dp)
+                    .clip(RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp))
+                    .background(AccentCoral)
             )
 
             // Spacious Full Text Viewport
@@ -187,7 +194,7 @@ fun AudioPrompterScreen(
                     .fillMaxSize()
                     .verticalScroll(scrollState)
                     .padding(horizontal = 24.dp)
-                    .padding(top = 180.dp, bottom = 220.dp) // Generous top/bottom margin for lookahead
+                    .padding(top = focusY, bottom = maxHeight - focusY + 80.dp)
             ) {
                 Text(
                     text = TextHighlightHelper.formatScriptText(script.content, Color(0xFFF1F5F9)),
@@ -306,22 +313,24 @@ fun AudioPrompterScreen(
                     )
                 }
 
-                // Bookmark Marker Button
-                IconButton(
-                    onClick = {
-                        if (isRecording) {
-                            Toast.makeText(context, "📍 已在 $timerText 添加标记点", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "请在录音中添加标记", Toast.LENGTH_SHORT).show()
+                // Focus Line Position Selector (Upper 35% vs Center 50%)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0x26FFFFFF))
+                        .clickable {
+                            focusPositionRatio = if (focusPositionRatio == 0.35f) 0.50f else 0.35f
+                            val label = if (focusPositionRatio == 0.35f) "中上 35% (黄金位)" else "正中 50%"
+                            Toast.makeText(context, "提示线位置: $label", Toast.LENGTH_SHORT).show()
                         }
-                    },
-                    modifier = Modifier.size(42.dp)
+                        .padding(horizontal = 7.dp, vertical = 5.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.BookmarkBorder,
-                        contentDescription = "Marker",
-                        tint = AccentAmber,
-                        modifier = Modifier.size(22.dp)
+                    Text(
+                        text = if (focusPositionRatio == 0.35f) "中上35%" else "居中50%",
+                        color = AccentAmber,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
@@ -371,7 +380,7 @@ fun AudioPrompterScreen(
                                 else -> 18
                             }
                         }
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                        .padding(horizontal = 7.dp, vertical = 5.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -385,7 +394,7 @@ fun AudioPrompterScreen(
                 // Speed Slider Mini
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.width(76.dp)
+                    modifier = Modifier.width(72.dp)
                 ) {
                     Text(
                         text = "${String.format("%.1f", scrollSpeed)}x 滚速",
