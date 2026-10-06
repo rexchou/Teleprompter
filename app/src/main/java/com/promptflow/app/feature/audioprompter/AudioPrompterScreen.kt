@@ -67,6 +67,7 @@ import com.promptflow.app.ui.theme.AccentCoral
 import com.promptflow.app.ui.theme.DarkCard
 import com.promptflow.app.ui.theme.DarkSurface
 import com.promptflow.app.ui.theme.RecordRed
+import com.promptflow.app.ui.theme.StudioBlack
 import com.promptflow.app.ui.theme.SuccessMint
 
 @Composable
@@ -82,14 +83,14 @@ fun AudioPrompterScreen(
     val scrollSpeed by viewModel.scrollEngine.scrollSpeed.collectAsState()
 
     val scrollState = rememberScrollState()
-    var fontSizeSp by remember { mutableIntStateOf(22) }
+    var fontSizeSp by remember { mutableIntStateOf(24) }
 
     // Dynamic amplitude history (24 segments)
     val waveformHistory = remember { mutableStateListOf<Float>() }
 
     LaunchedEffect(currentAmplitude) {
         val normalized = (currentAmplitude / 32767f).coerceIn(0.08f, 1f)
-        if (waveformHistory.size > 28) {
+        if (waveformHistory.size > 24) {
             waveformHistory.removeAt(0)
         }
         waveformHistory.add(normalized)
@@ -117,200 +118,143 @@ fun AudioPrompterScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkSurface)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+            .background(StudioBlack)
+            .padding(top = 16.dp, bottom = 12.dp)
     ) {
-        // Top Header Info Deck
+        // 1. Compact Top Status Bar (Height ~44dp)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 18.dp, bottom = 8.dp),
+                .padding(horizontal = 20.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(if (isRecording) SuccessMint else Color.Gray, CircleShape)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (isRecording) "正在录制 · AAC 256k" else "准备就绪 · 纯音频模式",
-                        color = if (isRecording) SuccessMint else Color(0xFF94A3B8),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Spacer(modifier = Modifier.height(3.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(if (isRecording) RecordRed else SuccessMint, CircleShape)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = script.title,
                     color = Color.White,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    modifier = Modifier.width(180.dp)
                 )
             }
 
-            // Duration Counter Deck
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "录制耗时",
-                    color = Color(0xFF64748B),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = timerText,
-                    color = AccentCoral,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black
-                )
-            }
+            // Big Timer
+            Text(
+                text = timerText,
+                color = if (isRecording) AccentCoral else Color(0xFF94A3B8),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Black
+            )
         }
 
-        // Middle Teleprompter Box with Active Reading Line Guide
+        // 2. Immersive Full-Screen Teleprompter Viewport (Takes 70%+ of screen!)
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(DarkCard)
-                .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(24.dp))
-                .padding(16.dp)
+                .padding(vertical = 4.dp)
         ) {
-            // Active Reading Focus Guide Line with Anchoring Arrows
-            Row(
+            // Subtle Left Focus Margin Cursor (Outside of text! Never overlaps words!)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .width(4.dp)
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp))
+                    .background(AccentCoral)
+            )
+
+            // Very subtle full-width reading band behind text
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(52.dp)
                     .align(Alignment.Center)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0x1AFF5E3A))
-                    .border(1.dp, Color(0x4DFF5E3A), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "▶", color = AccentCoral, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    text = "当前阅读基准线",
-                    color = Color(0x66FF5E3A),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(text = "◀", color = AccentCoral, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
+                    .background(Color(0x0DFFFFFF))
+            )
 
-            // Scrollable Content
+            // Spacious Full Text Viewport
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(vertical = 120.dp) // breathing room so first line starts at center
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 180.dp, bottom = 220.dp) // Generous top/bottom margin for lookahead
             ) {
                 Text(
                     text = TextHighlightHelper.formatScriptText(script.content, Color(0xFFF1F5F9)),
                     fontSize = fontSizeSp.sp,
-                    lineHeight = (fontSizeSp * 1.55f).sp,
-                    fontWeight = FontWeight.Medium
+                    lineHeight = (fontSizeSp * 1.65f).sp,
+                    fontWeight = FontWeight.Normal,
+                    letterSpacing = 0.5.sp
                 )
             }
 
-            // Top fade gradient mask
+            // Top Dissolve Scrim
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(30.dp)
+                    .height(60.dp)
                     .align(Alignment.TopCenter)
                     .background(
                         Brush.verticalGradient(
-                            listOf(DarkCard, Color.Transparent)
+                            listOf(StudioBlack, StudioBlack.copy(alpha = 0.8f), Color.Transparent)
                         )
                     )
             )
 
-            // Bottom fade gradient mask
+            // Bottom Dissolve Scrim
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(30.dp)
+                    .height(60.dp)
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color.Transparent, DarkCard)
+                            listOf(Color.Transparent, StudioBlack.copy(alpha = 0.8f), StudioBlack)
                         )
                     )
             )
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Studio Dual-Sided Waveform & dB Meter Card
-        Box(
+        // 3. Compact Bottom Studio Visualizer & Deck (Height ~140dp)
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .background(DarkCard)
-                .border(1.dp, Color(0x1AFFFFFF), RoundedCornerShape(18.dp))
-                .padding(12.dp)
+                .padding(horizontal = 16.dp)
         ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "● 48kHz 24-bit AAC 立体声采集",
-                        color = Color(0xFF10B981),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    val db = if (currentAmplitude > 0) {
-                        (20 * Math.log10(currentAmplitude.toDouble() / 32767.0)).toInt()
-                    } else -60
-
-                    val dbColor = when {
-                        db > -3 -> RecordRed
-                        db > -12 -> AccentAmber
-                        else -> Color(0xFF10B981)
-                    }
-
-                    Text(
-                        text = "$db dB 实时电平",
-                        color = dbColor,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Studio Mirror Waveform Canvas
+            // Mini Waveform & dB Strip
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(DarkCard)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Waveform bars
                 Canvas(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(38.dp)
+                        .width(160.dp)
+                        .height(24.dp)
                 ) {
                     val barCount = waveformHistory.size
                     if (barCount > 0) {
-                        val barWidth = 6.dp.toPx()
+                        val barWidth = 4.dp.toPx()
                         val spacing = (size.width - barCount * barWidth) / (barCount + 1).coerceAtLeast(1)
                         val centerY = size.height / 2
 
-                        // Center axis line
-                        drawLine(
-                            color = Color(0x26FFFFFF),
-                            start = Offset(0f, centerY),
-                            end = Offset(size.width, centerY),
-                            strokeWidth = 1.dp.toPx()
-                        )
-
                         waveformHistory.forEachIndexed { index, amp ->
-                            val halfHeight = ((size.height / 2) * amp).coerceAtLeast(2.dp.toPx())
+                            val halfHeight = ((size.height / 2) * amp).coerceAtLeast(1.5.dp.toPx())
                             val x = spacing + index * (barWidth + spacing)
                             val barColor = if (amp > 0.85f) RecordRed else AccentCoral
 
@@ -318,137 +262,147 @@ fun AudioPrompterScreen(
                                 color = barColor,
                                 topLeft = Offset(x, centerY - halfHeight),
                                 size = Size(barWidth, halfHeight * 2),
-                                cornerRadius = CornerRadius(3.dp.toPx())
+                                cornerRadius = CornerRadius(2.dp.toPx())
                             )
                         }
                     }
                 }
-            }
-        }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Bottom Deck Controls
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Play / Pause Scroll
-            IconButton(
-                onClick = { viewModel.scrollEngine.toggle() },
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(DarkCard)
-            ) {
-                Icon(
-                    imageVector = if (isScrolling) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = "Scroll Toggle",
-                    tint = Color.White
-                )
-            }
-
-            // Bookmark Marker Button
-            IconButton(
-                onClick = {
-                    if (isRecording) {
-                        Toast.makeText(context, "📍 已在 $timerText 添加标记点", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "录制中方可添加段落标记点", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(DarkCard)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.BookmarkBorder,
-                    contentDescription = "Add Marker",
-                    tint = AccentAmber
-                )
-            }
-
-            // Big Microphone Record / Stop Button
-            val infiniteTransition = rememberInfiniteTransition()
-            val pulseScale by infiniteTransition.animateFloat(
-                initialValue = 1f,
-                targetValue = 1.15f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(900),
-                    repeatMode = RepeatMode.Reverse
-                )
-            )
-
-            Box(
-                modifier = Modifier
-                    .size(68.dp)
-                    .scale(if (isRecording) pulseScale else 1f)
-                    .clip(CircleShape)
-                    .background(AccentCoral)
-                    .clickable {
-                        if (isRecording) {
-                            viewModel.stopRecording()
-                        } else {
-                            viewModel.startRecording()
-                        }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
-                    contentDescription = "Record",
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-
-            // Font Size Selector (Aa)
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(DarkCard)
-                    .clickable {
-                        fontSizeSp = when (fontSizeSp) {
-                            18 -> 22
-                            22 -> 26
-                            else -> 18
-                        }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
+                // Audio Status Tag
+                val db = if (currentAmplitude > 0) {
+                    (20 * Math.log10(currentAmplitude.toDouble() / 32767.0)).toInt()
+                } else -60
                 Text(
-                    text = "${fontSizeSp}sp",
-                    color = Color.White,
+                    text = "$db dB · AAC 256k",
+                    color = if (db > -6) AccentAmber else Color(0xFF10B981),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
 
-            // Speed Slider Mini
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.width(85.dp)
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Main Control Buttons Deck
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(Color(0xE6141824))
+                    .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(28.dp))
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "${String.format("%.1f", scrollSpeed)}x 滚速",
-                    color = Color.LightGray,
-                    fontSize = 10.sp
-                )
-                Slider(
-                    value = scrollSpeed,
-                    onValueChange = { viewModel.scrollEngine.setSpeed(it) },
-                    valueRange = 0.5f..2.5f,
-                    colors = SliderDefaults.colors(
-                        thumbColor = AccentCoral,
-                        activeTrackColor = AccentCoral,
-                        inactiveTrackColor = Color.DarkGray
+                // Play / Pause Scroll
+                IconButton(
+                    onClick = { viewModel.scrollEngine.toggle() },
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isScrolling) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = "Scroll Toggle",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // Bookmark Marker Button
+                IconButton(
+                    onClick = {
+                        if (isRecording) {
+                            Toast.makeText(context, "📍 已在 $timerText 添加标记点", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "请在录音中添加标记", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.BookmarkBorder,
+                        contentDescription = "Marker",
+                        tint = AccentAmber,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                // Big Mic Record / Stop Button
+                val infiniteTransition = rememberInfiniteTransition()
+                val pulseScale by infiniteTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 1.15f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(800),
+                        repeatMode = RepeatMode.Reverse
                     )
                 )
+
+                Box(
+                    modifier = Modifier
+                        .size(54.dp)
+                        .scale(if (isRecording) pulseScale else 1f)
+                        .clip(CircleShape)
+                        .background(AccentCoral)
+                        .clickable {
+                            if (isRecording) {
+                                viewModel.stopRecording()
+                            } else {
+                                viewModel.startRecording()
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
+                        contentDescription = "Record",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                // Font Size Selector (18 -> 24 -> 30)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0x26FFFFFF))
+                        .clickable {
+                            fontSizeSp = when (fontSizeSp) {
+                                18 -> 24
+                                24 -> 30
+                                else -> 18
+                            }
+                        }
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "${fontSizeSp}sp",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Speed Slider Mini
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.width(76.dp)
+                ) {
+                    Text(
+                        text = "${String.format("%.1f", scrollSpeed)}x 滚速",
+                        color = Color.LightGray,
+                        fontSize = 10.sp
+                    )
+                    Slider(
+                        value = scrollSpeed,
+                        onValueChange = { viewModel.scrollEngine.setSpeed(it) },
+                        valueRange = 0.5f..2.5f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = AccentCoral,
+                            activeTrackColor = AccentCoral,
+                            inactiveTrackColor = Color.DarkGray
+                        )
+                    )
+                }
             }
         }
     }
