@@ -2,7 +2,6 @@ package com.promptflow.app
 
 import com.promptflow.app.core.model.Script
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ScriptModelTest {
@@ -13,7 +12,7 @@ class ScriptModelTest {
             title = "测试台本",
             content = "今天我们要聊聊在 2026 年，独立创作者如何用极简工具实现高效率。"
         )
-        assertEquals(37, script.characterCount)
+        assertEquals(34, script.characterCount)
     }
 
     @Test
@@ -26,7 +25,6 @@ class ScriptModelTest {
             content = content,
             speed = 1.0f
         )
-        // 110 / (220/60) = 30 seconds
         assertEquals(30, script.estimatedDurationSeconds)
         assertEquals("00:30", script.formattedDuration)
     }
