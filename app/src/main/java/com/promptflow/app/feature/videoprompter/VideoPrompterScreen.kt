@@ -146,7 +146,7 @@ fun VideoPrompterScreen(
             // Punch-hole proximity alignment guide badge
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(full = 12.dp, topStart = 12.dp, topEnd = 12.dp, bottomEnd = 0.dp, bottomStart = 0.dp))
+                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                     .background(Color(0xD90D0F15))
                     .border(0.5.dp, Color(0x33FFFFFF), RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                     .padding(horizontal = 12.dp, vertical = 3.dp),
