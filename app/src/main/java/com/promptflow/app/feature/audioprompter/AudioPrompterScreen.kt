@@ -3,6 +3,7 @@ package com.promptflow.app.feature.audioprompter
 import android.widget.Toast
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -98,8 +99,8 @@ fun AudioPrompterScreen(
     val scrollState = rememberScrollState()
     var fontSizeSp by remember { mutableIntStateOf(24) }
 
-    // Focus line vertical position: 0.35f (upper 35% - ergonomic golden ratio) vs 0.50f (center)
-    var focusPositionRatio by remember { mutableFloatStateOf(0.35f) }
+    // Focus line vertical position: 0.10f (top line - prompts from very first word) vs 0.32f vs 0.50f
+    var focusPositionRatio by remember { mutableFloatStateOf(0.10f) }
 
     // Dynamic amplitude history (24 segments)
     val waveformHistory = remember { mutableStateListOf<Float>() }
@@ -216,13 +217,16 @@ fun AudioPrompterScreen(
                     .background(AccentCoral)
             )
 
-            // Spacious Full Text Viewport (Starts naturally from top, scrolls through focus line)
+            // Spacious Full Text Viewport (Starts aligned with focus line so Line 1 is immediately prompted)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
                     .padding(horizontal = 24.dp)
-                    .padding(top = 28.dp, bottom = maxHeight - focusY + 80.dp)
+                    .padding(
+                        top = (focusY - 20.dp).coerceAtLeast(14.dp),
+                        bottom = maxHeight - focusY + 120.dp
+                    )
             ) {
                 Text(
                     text = TextHighlightHelper.formatScriptText(script.content, Color(0xFFF1F5F9)),
@@ -233,18 +237,27 @@ fun AudioPrompterScreen(
                 )
             }
 
-            // Top Dissolve Scrim
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .align(Alignment.TopCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(StudioBlack, StudioBlack.copy(alpha = 0.8f), Color.Transparent)
-                        )
-                    )
+            // Top Dissolve Scrim (Only visible when scrolled up to never mask the top line)
+            val topScrimAlpha by animateFloatAsState(
+                targetValue = if (scrollOffset > 10f) 1f else 0f,
+                label = "topScrimAlpha"
             )
+            if (topScrimAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    StudioBlack.copy(alpha = topScrimAlpha),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            }
 
             // Bottom Dissolve Scrim
             Box(
@@ -363,21 +376,34 @@ fun AudioPrompterScreen(
                     )
                 }
 
-                // 2. Focus Line Position Selector (Upper 35% vs Center 50%)
+                // 2. Focus Line Position Selector (Top 10% vs Upper 32% vs Center 50%)
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color(0x26FFFFFF))
                         .clickable {
-                            focusPositionRatio = if (focusPositionRatio == 0.35f) 0.50f else 0.35f
-                            val label = if (focusPositionRatio == 0.35f) "中上 35% (黄金位)" else "正中 50%"
-                            Toast.makeText(context, "提示线位置: $label", Toast.LENGTH_SHORT).show()
+                            focusPositionRatio = when {
+                                focusPositionRatio <= 0.15f -> 0.32f
+                                focusPositionRatio <= 0.35f -> 0.50f
+                                else -> 0.10f
+                            }
+                            val label = when {
+                                focusPositionRatio <= 0.15f -> "顶端首行 (从第1行起提)"
+                                focusPositionRatio <= 0.35f -> "中上预瞄 (32%)"
+                                else -> "屏幕居中 (50%)"
+                            }
+                            Toast.makeText(context, "提词基准: $label", Toast.LENGTH_SHORT).show()
                         }
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    val label = when {
+                        focusPositionRatio <= 0.15f -> "顶端首行"
+                        focusPositionRatio <= 0.35f -> "中上32%"
+                        else -> "居中50%"
+                    }
                     Text(
-                        text = if (focusPositionRatio == 0.35f) "中上35%" else "居中50%",
+                        text = label,
                         color = AccentAmber,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
