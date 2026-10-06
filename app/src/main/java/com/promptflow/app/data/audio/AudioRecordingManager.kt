@@ -5,6 +5,7 @@ import android.media.MediaRecorder
 import android.os.Build
 import android.os.Environment
 import com.promptflow.app.core.model.RecordingState
+import com.promptflow.app.core.model.VoiceFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,7 +36,7 @@ class AudioRecordingManager(private val context: Context) {
     private val _currentAmplitude = MutableStateFlow(0)
     val currentAmplitude: StateFlow<Int> = _currentAmplitude.asStateFlow()
 
-    fun startRecording(): Result<File> {
+    fun startRecording(voiceFilter: VoiceFilter = VoiceFilter.default): Result<File> {
         try {
             stopPolling()
             mediaRecorder?.release()
@@ -45,13 +46,19 @@ class AudioRecordingManager(private val context: Context) {
             val audioFile = File(storageDir, "PromptFlow_Audio_$timestamp.m4a")
             currentOutputFile = audioFile
 
+            val audioSource = if (voiceFilter.enableNoiseSuppressor) {
+                MediaRecorder.AudioSource.VOICE_RECOGNITION
+            } else {
+                MediaRecorder.AudioSource.MIC
+            }
+
             mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 MediaRecorder(context)
             } else {
                 @Suppress("DEPRECATION")
                 MediaRecorder()
             }.apply {
-                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setAudioSource(audioSource)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
                 setAudioEncodingBitRate(256000) // 256kbps high quality
@@ -133,6 +140,11 @@ class AudioRecordingManager(private val context: Context) {
         }
         _currentAmplitude.value = 0
         return savedFile
+    }
+
+    fun resetToIdle() {
+        _recordingState.value = RecordingState.Idle
+        _currentAmplitude.value = 0
     }
 
     private fun startPolling() {

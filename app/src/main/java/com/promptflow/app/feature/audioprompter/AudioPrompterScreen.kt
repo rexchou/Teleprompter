@@ -34,11 +34,13 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VerticalAlignTop
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,6 +67,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.promptflow.app.core.model.RecordingState
 import com.promptflow.app.core.model.Script
+import com.promptflow.app.core.model.VoiceFilter
 import com.promptflow.app.core.util.TextHighlightHelper
 import com.promptflow.app.ui.theme.AccentAmber
 import com.promptflow.app.ui.theme.AccentCoral
@@ -73,6 +77,7 @@ import com.promptflow.app.ui.theme.RecordRed
 import com.promptflow.app.ui.theme.StudioBlack
 import com.promptflow.app.ui.theme.SuccessMint
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudioPrompterScreen(
     script: Script,
@@ -84,6 +89,9 @@ fun AudioPrompterScreen(
     val isScrolling by viewModel.scrollEngine.isScrolling.collectAsState()
     val scrollOffset by viewModel.scrollEngine.scrollOffset.collectAsState()
     val scrollSpeed by viewModel.scrollEngine.scrollSpeed.collectAsState()
+    val voiceFilter by viewModel.currentVoiceFilter.collectAsState()
+
+    var showVoiceFilterSheet by remember { mutableStateOf(false) }
 
     val scrollState = rememberScrollState()
     var fontSizeSp by remember { mutableIntStateOf(24) }
@@ -239,20 +247,23 @@ fun AudioPrompterScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
         ) {
-            // Mini Waveform & dB Strip
+            // Mini Waveform & dB Strip (Clickable to switch Voice Filter)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(DarkCard)
+                    .clickable { showVoiceFilterSheet = true }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val filterColor = Color(voiceFilter.accentColorHex)
+
                 // Waveform bars
                 Canvas(
                     modifier = Modifier
-                        .width(160.dp)
+                        .width(140.dp)
                         .height(24.dp)
                 ) {
                     val barCount = waveformHistory.size
@@ -264,7 +275,7 @@ fun AudioPrompterScreen(
                         waveformHistory.forEachIndexed { index, amp ->
                             val halfHeight = ((size.height / 2) * amp).coerceAtLeast(1.5.dp.toPx())
                             val x = spacing + index * (barWidth + spacing)
-                            val barColor = if (amp > 0.85f) RecordRed else AccentCoral
+                            val barColor = if (amp > 0.85f) RecordRed else filterColor
 
                             drawRoundRect(
                                 color = barColor,
@@ -276,16 +287,26 @@ fun AudioPrompterScreen(
                     }
                 }
 
-                // Audio Status Tag
+                // Audio Status Tag with Active Voice Filter Badge
                 val db = if (currentAmplitude > 0) {
                     (20 * Math.log10(currentAmplitude.toDouble() / 32767.0)).toInt()
                 } else -60
-                Text(
-                    text = "$db dB · AAC 256k",
-                    color = if (db > -6) AccentAmber else Color(0xFF10B981),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "🪄 ${voiceFilter.displayName}",
+                        color = filterColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "$db dB",
+                        color = if (db > -6) AccentAmber else Color(0xFF10B981),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -297,20 +318,20 @@ fun AudioPrompterScreen(
                     .clip(RoundedCornerShape(28.dp))
                     .background(Color(0xE6141824))
                     .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(28.dp))
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Play / Pause Scroll
                 IconButton(
                     onClick = { viewModel.scrollEngine.toggle() },
-                    modifier = Modifier.size(42.dp)
+                    modifier = Modifier.size(38.dp)
                 ) {
                     Icon(
                         imageVector = if (isScrolling) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = "Scroll Toggle",
                         tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
@@ -324,12 +345,31 @@ fun AudioPrompterScreen(
                             val label = if (focusPositionRatio == 0.35f) "中上 35% (黄金位)" else "正中 50%"
                             Toast.makeText(context, "提示线位置: $label", Toast.LENGTH_SHORT).show()
                         }
-                        .padding(horizontal = 7.dp, vertical = 5.dp),
+                        .padding(horizontal = 6.dp, vertical = 5.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (focusPositionRatio == 0.35f) "中上35%" else "居中50%",
                         color = AccentAmber,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Voice Beautifier Master Button (Opens preset sheet)
+                val filterColor = Color(voiceFilter.accentColorHex)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(filterColor.copy(alpha = 0.2f))
+                        .border(1.dp, filterColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable { showVoiceFilterSheet = true }
+                        .padding(horizontal = 6.dp, vertical = 5.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "🪄${voiceFilter.displayName.take(2)}",
+                        color = filterColor,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -348,7 +388,7 @@ fun AudioPrompterScreen(
 
                 Box(
                     modifier = Modifier
-                        .size(54.dp)
+                        .size(52.dp)
                         .scale(if (isRecording) pulseScale else 1f)
                         .clip(CircleShape)
                         .background(AccentCoral)
@@ -365,7 +405,7 @@ fun AudioPrompterScreen(
                         imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
                         contentDescription = "Record",
                         tint = Color.White,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
 
@@ -381,13 +421,13 @@ fun AudioPrompterScreen(
                                 else -> 18
                             }
                         }
-                        .padding(horizontal = 7.dp, vertical = 5.dp),
+                        .padding(horizontal = 6.dp, vertical = 5.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "${fontSizeSp}sp",
                         color = Color.White,
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -395,12 +435,12 @@ fun AudioPrompterScreen(
                 // Speed Slider Mini
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.width(72.dp)
+                    modifier = Modifier.width(66.dp)
                 ) {
                     Text(
                         text = "${String.format("%.1f", scrollSpeed)}x 滚速",
                         color = Color.LightGray,
-                        fontSize = 10.sp
+                        fontSize = 9.sp
                     )
                     Slider(
                         value = scrollSpeed,
@@ -414,6 +454,34 @@ fun AudioPrompterScreen(
                     )
                 }
             }
+        }
+
+        // Voice Filter Selector Bottom Sheet
+        if (showVoiceFilterSheet) {
+            VoiceFilterSelectorSheet(
+                sheetState = rememberModalBottomSheetState(),
+                currentFilter = voiceFilter,
+                onFilterSelected = { selected ->
+                    viewModel.setVoiceFilter(selected)
+                    showVoiceFilterSheet = false
+                    Toast.makeText(context, "已切换声音美化: ${selected.displayName}", Toast.LENGTH_SHORT).show()
+                },
+                onDismissRequest = { showVoiceFilterSheet = false }
+            )
+        }
+
+        // Finished Audio Review & Audition Dialog
+        val finishedState = recordingState as? RecordingState.Finished
+        if (finishedState != null) {
+            AudioReviewDialog(
+                filePath = finishedState.outputUri,
+                initialFilter = voiceFilter,
+                onDismiss = { viewModel.resetToIdle() },
+                onRerecord = {
+                    viewModel.resetToIdle()
+                    viewModel.startRecording()
+                }
+            )
         }
     }
 }

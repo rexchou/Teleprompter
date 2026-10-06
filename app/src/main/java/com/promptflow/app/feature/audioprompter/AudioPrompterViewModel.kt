@@ -4,9 +4,12 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.promptflow.app.core.model.RecordingState
+import com.promptflow.app.core.model.VoiceFilter
 import com.promptflow.app.data.audio.AudioRecordingManager
 import com.promptflow.app.domain.engine.PrompterScrollEngine
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class AudioPrompterViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -16,8 +19,15 @@ class AudioPrompterViewModel(application: Application) : AndroidViewModel(applic
     val recordingState: StateFlow<RecordingState> = audioManager.recordingState
     val currentAmplitude: StateFlow<Int> = audioManager.currentAmplitude
 
+    private val _currentVoiceFilter = MutableStateFlow(VoiceFilter.default)
+    val currentVoiceFilter: StateFlow<VoiceFilter> = _currentVoiceFilter.asStateFlow()
+
+    fun setVoiceFilter(filter: VoiceFilter) {
+        _currentVoiceFilter.value = filter
+    }
+
     fun startRecording() {
-        audioManager.startRecording()
+        audioManager.startRecording(_currentVoiceFilter.value)
         scrollEngine.start()
     }
 
@@ -34,6 +44,10 @@ class AudioPrompterViewModel(application: Application) : AndroidViewModel(applic
     fun stopRecording() {
         audioManager.stopRecording()
         scrollEngine.pause()
+    }
+
+    fun resetToIdle() {
+        audioManager.resetToIdle()
     }
 
     override fun onCleared() {
