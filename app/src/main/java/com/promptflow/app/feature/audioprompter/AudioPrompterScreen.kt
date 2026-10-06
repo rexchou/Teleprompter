@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
@@ -84,6 +85,7 @@ import com.promptflow.app.ui.theme.SuccessMint
 @Composable
 fun AudioPrompterScreen(
     script: Script,
+    onBack: () -> Unit = {},
     viewModel: AudioPrompterViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -144,7 +146,7 @@ fun AudioPrompterScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 6.dp),
+                .padding(horizontal = 16.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -152,6 +154,18 @@ fun AudioPrompterScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f, fill = false)
             ) {
+                IconButton(
+                    onClick = { onBack() },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "返回",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
                 Box(
                     modifier = Modifier
                         .size(8.dp)

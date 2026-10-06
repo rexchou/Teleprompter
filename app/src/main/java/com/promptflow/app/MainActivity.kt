@@ -126,7 +126,8 @@ fun PromptFlowNavigation(
             )
             VideoPrompterScreen(
                 script = script,
-                hasAudioPermission = hasAudioPermission
+                hasAudioPermission = hasAudioPermission,
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -136,7 +137,8 @@ fun PromptFlowNavigation(
                 content = "请在台本中心创建或选择台本开始提词。"
             )
             AudioPrompterScreen(
-                script = script
+                script = script,
+                onBack = { navController.popBackStack() }
             )
         }
     }
