@@ -23,8 +23,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -139,7 +141,8 @@ fun VideoPrompterScreen(
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 36.dp, start = 16.dp, end = 16.dp)
+                .statusBarsPadding()
+                .padding(top = 8.dp, start = 16.dp, end = 16.dp)
                 .fillMaxWidth(0.90f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -330,7 +333,8 @@ fun VideoPrompterScreen(
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 28.dp, start = 16.dp, end = 16.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 14.dp, start = 16.dp, end = 16.dp)
                 .fillMaxWidth()
         ) {
             Row(

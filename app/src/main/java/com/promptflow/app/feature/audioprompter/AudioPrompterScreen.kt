@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -133,7 +135,9 @@ fun AudioPrompterScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(StudioBlack)
-            .padding(top = 16.dp, bottom = 12.dp)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(top = 4.dp, bottom = 8.dp)
     ) {
         // 1. Compact Top Status Bar (Height ~44dp)
         Row(
@@ -143,30 +147,45 @@ fun AudioPrompterScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
                 Box(
                     modifier = Modifier
                         .size(8.dp)
                         .background(if (isRecording) RecordRed else SuccessMint, CircleShape)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = script.title,
                     color = Color.White,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    modifier = Modifier.width(180.dp)
+                    maxLines = 1
                 )
             }
 
+            Spacer(modifier = Modifier.width(16.dp))
+
             // Big Timer
-            Text(
-                text = timerText,
-                color = if (isRecording) AccentCoral else Color(0xFF94A3B8),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Black
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isRecording) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(RecordRed)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                }
+                Text(
+                    text = timerText,
+                    color = if (isRecording) AccentCoral else Color(0xFF94A3B8),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
         }
 
         // 2. Immersive Full-Screen Teleprompter Viewport with Calibrated Upper-35% Focus Line
@@ -197,13 +216,13 @@ fun AudioPrompterScreen(
                     .background(AccentCoral)
             )
 
-            // Spacious Full Text Viewport
+            // Spacious Full Text Viewport (Starts naturally from top, scrolls through focus line)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
                     .padding(horizontal = 24.dp)
-                    .padding(top = focusY, bottom = maxHeight - focusY + 80.dp)
+                    .padding(top = 28.dp, bottom = maxHeight - focusY + 80.dp)
             ) {
                 Text(
                     text = TextHighlightHelper.formatScriptText(script.content, Color(0xFFF1F5F9)),
@@ -251,10 +270,11 @@ fun AudioPrompterScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .background(DarkCard)
+                    .border(1.dp, Color(voiceFilter.accentColorHex).copy(alpha = 0.25f), RoundedCornerShape(16.dp))
                     .clickable { showVoiceFilterSheet = true }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -263,12 +283,12 @@ fun AudioPrompterScreen(
                 // Waveform bars
                 Canvas(
                     modifier = Modifier
-                        .width(140.dp)
+                        .width(130.dp)
                         .height(24.dp)
                 ) {
                     val barCount = waveformHistory.size
                     if (barCount > 0) {
-                        val barWidth = 4.dp.toPx()
+                        val barWidth = 3.5.dp.toPx()
                         val spacing = (size.width - barCount * barWidth) / (barCount + 1).coerceAtLeast(1)
                         val centerY = size.height / 2
 
@@ -287,19 +307,27 @@ fun AudioPrompterScreen(
                     }
                 }
 
-                // Audio Status Tag with Active Voice Filter Badge
+                // Voice Filter VIP Badge & dB Indicator
                 val db = if (currentAmplitude > 0) {
                     (20 * Math.log10(currentAmplitude.toDouble() / 32767.0)).toInt()
                 } else -60
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "🪄 ${voiceFilter.displayName}",
-                        color = filterColor,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(filterColor.copy(alpha = 0.18f))
+                            .border(0.5.dp, filterColor.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = "🪄 ${voiceFilter.displayName}",
+                            color = filterColor,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "$db dB",
                         color = if (db > -6) AccentAmber else Color(0xFF10B981),
@@ -311,71 +339,52 @@ fun AudioPrompterScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Main Control Buttons Deck
+            // Main Control Buttons Deck (Symmetrical, spacious 5-control layout)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(28.dp))
                     .background(Color(0xE6141824))
                     .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(28.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Play / Pause Scroll
+                // 1. Play / Pause Scroll
                 IconButton(
                     onClick = { viewModel.scrollEngine.toggle() },
-                    modifier = Modifier.size(38.dp)
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = if (isScrolling) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = "Scroll Toggle",
                         tint = Color.White,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
-                // Focus Line Position Selector (Upper 35% vs Center 50%)
+                // 2. Focus Line Position Selector (Upper 35% vs Center 50%)
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(10.dp))
                         .background(Color(0x26FFFFFF))
                         .clickable {
                             focusPositionRatio = if (focusPositionRatio == 0.35f) 0.50f else 0.35f
                             val label = if (focusPositionRatio == 0.35f) "中上 35% (黄金位)" else "正中 50%"
                             Toast.makeText(context, "提示线位置: $label", Toast.LENGTH_SHORT).show()
                         }
-                        .padding(horizontal = 6.dp, vertical = 5.dp),
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (focusPositionRatio == 0.35f) "中上35%" else "居中50%",
                         color = AccentAmber,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
-                // Voice Beautifier Master Button (Opens preset sheet)
-                val filterColor = Color(voiceFilter.accentColorHex)
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(filterColor.copy(alpha = 0.2f))
-                        .border(1.dp, filterColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .clickable { showVoiceFilterSheet = true }
-                        .padding(horizontal = 6.dp, vertical = 5.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "🪄${voiceFilter.displayName.take(2)}",
-                        color = filterColor,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Big Mic Record / Stop Button
+                // 3. Big Mic Record / Stop Button (Center Hero)
                 val infiniteTransition = rememberInfiniteTransition()
                 val pulseScale by infiniteTransition.animateFloat(
                     initialValue = 1f,
@@ -388,7 +397,7 @@ fun AudioPrompterScreen(
 
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
+                        .size(54.dp)
                         .scale(if (isRecording) pulseScale else 1f)
                         .clip(CircleShape)
                         .background(AccentCoral)
@@ -405,14 +414,14 @@ fun AudioPrompterScreen(
                         imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
                         contentDescription = "Record",
                         tint = Color.White,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
 
-                // Font Size Selector (18 -> 24 -> 30)
+                // 4. Font Size Selector (18 -> 24 -> 30)
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(10.dp))
                         .background(Color(0x26FFFFFF))
                         .clickable {
                             fontSizeSp = when (fontSizeSp) {
@@ -421,36 +430,40 @@ fun AudioPrompterScreen(
                                 else -> 18
                             }
                         }
-                        .padding(horizontal = 6.dp, vertical = 5.dp),
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "${fontSizeSp}sp",
                         color = Color.White,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
-                // Speed Slider Mini
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.width(66.dp)
+                // 5. Speed Selector Pill (1-Tap Cycle 0.8x -> 1.0x -> 1.2x -> 1.5x -> 2.0x)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0x26FFFFFF))
+                        .clickable {
+                            val nextSpeed = when {
+                                scrollSpeed < 1.0f -> 1.0f
+                                scrollSpeed < 1.2f -> 1.2f
+                                scrollSpeed < 1.4f -> 1.5f
+                                scrollSpeed < 1.8f -> 2.0f
+                                else -> 0.8f
+                            }
+                            viewModel.scrollEngine.setSpeed(nextSpeed)
+                        }
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "${String.format("%.1f", scrollSpeed)}x 滚速",
-                        color = Color.LightGray,
-                        fontSize = 9.sp
-                    )
-                    Slider(
-                        value = scrollSpeed,
-                        onValueChange = { viewModel.scrollEngine.setSpeed(it) },
-                        valueRange = 0.5f..2.5f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = AccentCoral,
-                            activeTrackColor = AccentCoral,
-                            inactiveTrackColor = Color.DarkGray
-                        )
+                        text = "${String.format("%.1f", scrollSpeed)}x速",
+                        color = AccentCoral,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
