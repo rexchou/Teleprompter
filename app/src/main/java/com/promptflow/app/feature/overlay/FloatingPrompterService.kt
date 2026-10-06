@@ -247,6 +247,9 @@ private fun FloatingWindowCard(
     val scrollSpeed by scrollEngine.scrollSpeed.collectAsState()
     val scrollState = rememberScrollState()
 
+    var opacityAlpha by remember { mutableStateOf(0.85f) }
+    var fontSizeSp by remember { mutableStateOf(15) }
+
     LaunchedEffect(scrollOffset) {
         scrollState.scrollTo(scrollOffset.toInt())
     }
@@ -258,10 +261,10 @@ private fun FloatingWindowCard(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xE6111318))
-            .border(1.dp, Color(0x40FFFFFF), RoundedCornerShape(16.dp))
-            .padding(10.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF0F1219).copy(alpha = opacityAlpha))
+            .border(1.dp, Color(0x38FFFFFF), RoundedCornerShape(18.dp))
+            .padding(12.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Drag handle and top bar
@@ -287,19 +290,44 @@ private fun FloatingWindowCard(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Opacity Switcher
+                    Text(
+                        text = "${(opacityAlpha * 100).toInt()}%",
+                        color = Color(0xFF94A3B8),
+                        fontSize = 10.sp,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0x26FFFFFF))
+                            .clickable {
+                                opacityAlpha = when (opacityAlpha) {
+                                    0.85f -> 0.60f
+                                    0.60f -> 0.95f
+                                    else -> 0.85f
+                                }
+                            }
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    // Speed Toggle
                     Text(
                         text = "${String.format("%.1f", scrollSpeed)}x",
                         color = Color(0xFFFBBF24),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0x26FBBF24))
                             .clickable {
                                 val next = if (scrollSpeed >= 2.5f) 0.8f else scrollSpeed + 0.4f
                                 scrollEngine.setSpeed(next)
                             }
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
                     )
+
                     Spacer(modifier = Modifier.width(4.dp))
+
                     Box(
                         modifier = Modifier
                             .size(22.dp)
@@ -319,7 +347,7 @@ private fun FloatingWindowCard(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Scrollable Content
+            // Scrollable Content with Highlighted Keywords
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -327,10 +355,9 @@ private fun FloatingWindowCard(
                     .verticalScroll(scrollState)
             ) {
                 Text(
-                    text = content,
-                    color = Color(0xFFEDEDED),
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
+                    text = com.promptflow.app.core.util.TextHighlightHelper.formatScriptText(content, Color(0xFFF1F5F9)),
+                    fontSize = fontSizeSp.sp,
+                    lineHeight = (fontSizeSp * 1.5f).sp,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -344,7 +371,7 @@ private fun FloatingWindowCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isScrolling) "▶ 正在滚动..." else "⏸ 已暂停 (点击开始)",
+                    text = if (isScrolling) "▶ 正在滚动..." else "⏸ 已暂停",
                     color = if (isScrolling) Color(0xFF10B981) else Color(0xFF94A3B8),
                     fontSize = 11.sp
                 )
