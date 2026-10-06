@@ -54,12 +54,23 @@ PromptFlow 遵循现代 Android 开发标准规范，采用单工程、高内聚
     提词器文本滚动框强制限制最大宽度（例如不超过屏幕宽度的 65%），并且始终向摄像头方向靠拢（前置摄像头打孔在顶部居中则向顶居中靠拢；打孔在左上角则支持靠左上微调），使视线焦点自然保持在镜头极小视差夹角内。
 
 ### 2.2 纯音频录制引擎 (Audio Subsystem)
-- **技术选型**：`android.media.MediaRecorder`（简单高保真 M4A/AAC）或底层 `AudioRecord`（用于实时波形采集）
+- **技术选型**：`android.media.MediaRecorder`（简单高保真 M4A/AAC 256kbps 48kHz）
 - **设计决策**：
   - 封装 `AudioRecordingManager`，对外暴露统一的状态机：
     `Idle` -> `Recording(durationMs, currentAmplitude)` -> `Paused` -> `Completed(fileUri)`
   - 采集振幅（`getMaxAmplitude()`），在 Compose 界面中实时绘制平滑波形条，给创作者清晰的拾音反馈。
-  - 录制保存路径采用 `MediaStore.Audio.Media.EXTERNAL_CONTENT_URI`，录制结束自动刷新媒体库。
+  - 录制保存路径采用 App 专属外部媒体目录，录制结束自动刷新媒体库。
+
+### 2.2.1 录音棚声音美化引擎 (Audio Polisher Subsystem)
+- **技术选型**：Android 原生 `android.media.audiofx.*` (Equalizer, NoiseSuppressor, AutomaticGainControl, PresetReverb)
+- **零成本架构**：完全在端侧 DSP 本地运行，0 云端 API 依赖，0 Token 成本，断网离线可用。
+- **5 款大师级预设**：
+  1. **磁性电台 (Radio Warm)**：+6dB 150Hz 胸腔共鸣增益，呈现低沉浑厚的播音主持音色；
+  2. **清澈通透 (Studio Clean)**：+7dB 4kHz 齿音提亮，强化咬字清晰度，适合普通话快节奏口播；
+  3. **治愈播客 (Intimate Podcast)**：微空间录音棚混响与动态防爆音压限；
+  4. **纯净降噪 (Deep Denoise)**：暴力过滤空调机位底噪与环境杂音；
+  5. **原声直录 (Natural)**：无损直通干音。
+- **A/B 旁路对比监听**：在 `AudioReviewDialog` 中支持“按住对比原声”触觉手势，手指按住时直通原始干音，松开瞬间恢复美音，为用户提供极其震撼的声学对比体验。
 
 ### 2.3 全局悬浮窗引擎 (Floating Window Subsystem)
 - **技术选型**：`android.app.Service` (带有 `FOREGROUND_SERVICE_SPECIAL_USE` 声明) + `WindowManager` + `androidx.compose.ui.platform.ComposeView`
