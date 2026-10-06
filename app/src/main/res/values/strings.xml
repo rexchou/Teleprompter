@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PromptFlow</string>
+    <string name="prompt_video_title">视频录制提词</string>
+    <string name="prompt_audio_title">音频录音提词</string>
+    <string name="prompt_overlay_title">全局悬浮窗</string>
+    <string name="scripts_hub_title">我的台本</string>
+    <string name="channel_floating_service">悬浮提词器服务</string>
+    <string name="channel_floating_service_desc">保持悬浮提词窗在前台稳定运行</string>
+</resources>
